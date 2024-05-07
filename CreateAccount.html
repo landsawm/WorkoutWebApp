@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8">
+    <title>Create Account</title>
+    <link rel="shortcut icon" href="/assets/favicon.ico">
+    <link rel="stylesheet" href="./src/main.css">
+</head>
+<body>
+    <div class="container">
+        <form id="createAccount">
+            <h1 class="form__title">Create Account</h1>
+            <div class="form__message form__message--error"></div>
+            <div class="form__input-group">
+                <input type="text" class="form__input" autofocus placeholder="Username" id="username">
+                <div class="form__input-error-message" id="username-error"></div>
+            </div>
+            <div class="form__input-group">
+                <input type="text" class="form__input" autofocus placeholder="Email Address" id="email">
+                <div class="form__input-error-message" id="email-error"></div>
+            </div>
+            <div class="form__input-group">
+                <input type="password" class="form__input" autofocus placeholder="Password" id="password">
+                <div class="form__input-error-message" id="password-error"></div>
+            </div>
+            <div class="form__input-group">
+                <input type="password" class="form__input" autofocus placeholder="Confirm password" id="confirm-password">
+                <div class="form__input-error-message" id="confirm-password-error"></div>
+            </div>
+            <div class="form__input-group">
+                <input type="height" class="form__input" autofocus placeholder="Height (Inches)" id="height">
+            </div>
+            <div class="form__input-group">
+                <input type="weight" class="form__input" autofocus placeholder="Weight (Pounds)" id="weight">
+            </div>
+            <div class="form__input-group">
+                <select id="goal">
+                    <option value="lose">Lose Weight</option>
+                    <option value="maintain">Maintain Weight</option>
+                    <option value="gain">Gain Muscle</option>
+                  </select>
+            </div>
+            <button class="form__button" type="submit" id="submit">Continue</button>
+            <p class="form__text">
+                <a class="form__link" href="login.html" id="linkLogin">Already have an account? Sign in</a>
+            </p>
+        </form>
+    </div>
+    <div class="alert-container" id="alertForm">
+        <div class="alert-header">Account Created!</div>
+        <div class="alert-message">Account created successfully!</div>
+    <button class="alert-button" id="closeAlert">Close</button>
+    </div>
+    <div class="alert-container error" id="errorForm">
+        <div class="alert-header">Error</div>
+        <div class="alert-message" id="errorMessage"></div>
+        <button class="alert-button" id="closeError">Close</button>
+    </div>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBizhqmIMrQUlUvth8gKEDOFAleXxe-z-I",
+    authDomain: "workoutapp-d907b.firebaseapp.com",
+    projectId: "workoutapp-d907b",
+    storageBucket: "workoutapp-d907b.appspot.com",
+    messagingSenderId: "537280252444",
+    appId: "1:537280252444:web:6881e57f9e601b350eadd9"
+  };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth();
+        const db = getDatabase();
+
+        document.getElementById("createAccount").addEventListener('submit', function(e){
+            e.preventDefault();
+            
+            const username = document.getElementById("username").value;
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+            const confirmPassword = document.getElementById("confirm-password").value;
+            const height = document.getElementById("height").value;
+            const weight = document.getElementById("weight").value;
+            const goal = document.getElementById("goal").value;
+
+            if (!validateUsername(username)) {
+                document.getElementById("username-error").innerText = "Username must be at least 5 characters long.";
+                return;
+            }
+            document.getElementById("username-error").innerText = "";
+
+            if (!validateEmail(email)) {
+                document.getElementById("email-error").innerText = "Invalid email address.";
+                return;
+            }
+            document.getElementById("email-error").innerText = "";
+
+            if (!validatePassword(password)) {
+                document.getElementById("password-error").innerText = "Password must be at least 6 characters long.";
+                return;
+            }
+            document.getElementById("password-error").innerText = "";
+
+            if (password !== confirmPassword) {
+                document.getElementById("confirm-password-error").innerText = "Passwords do not match.";
+                return;
+            }
+            document.getElementById("confirm-password-error").innerText = "";
+
+            createUserWithEmailAndPassword(auth, email, password, height, weight, goal)
+            .then((userCredential) => {
+                const user = userCredential.user;
+                set(ref(db, 'users/' + user.uid), {
+                    username: username,
+                    email: email,
+                    height: height,
+                    weight: weight,
+                    goal: goal
+
+                });
+                document.getElementById("alertForm").classList.add("show");
+            })
+            .catch((error) => {
+                const errorCode = error.code;
+                const errorMessage = error.message;
+                console.error(errorMessage);
+                document.getElementById("errorForm").classList.add("show");
+                document.getElementById("errorMessage").innerText = errorMessage;
+            });
+        });
+
+        function validateEmail(email) {
+            const expression = /^[^@]+@\w+(\.\w+)+\w$/;
+            return expression.test(String(email).toLowerCase());
+        }
+
+        function validatePassword(password) {
+            return password.length >= 6;
+        }
+
+        function validateUsername(username) {
+            return username.length >= 5;
+        }
+        document.getElementById("closeAlert").addEventListener("click", function() {
+            document.getElementById("alertForm").classList.remove("show");
+            window.location.href = "Home.html";
+        });
+        document.getElementById("closeError").addEventListener("click", function() {
+            document.getElementById("errorForm").classList.remove("show");
+        });
+    </script>
+    <script src="./src/main.js"></script>
+</body>
+</html>
