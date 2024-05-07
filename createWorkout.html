@@ -1,180 +1,354 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Workout</title>
+    <link rel="stylesheet" href="createWorkout.css">
+</head>
+<body>
+    <header>
+            <h1>Create Workout</h1>
+            <button id="goToHomePageButton" class="home-button">Home</button>
+    </header>
+
+    <main>
+        <div class="container">
+            <input type="text" id="workoutNameInput" placeholder="Enter workout name...">
+            <div class="filters">
+              <h3>Primary Muscles</h3>
+              <select id="muscleSelect">
+                <option value="all">All</option>
+                <option value="traps">Traps</option>
+                <option value="forearms">Forearms</option>
+                <option value="calves">Calves</option>
+                <option value="shoulders">Shoulders</option>
+                <option value="quadriceps">Quadriceps</option>
+                <option value="adductors">Adductors</option>
+                <option value="lower back">Lower Back</option>
+                <option value="lats">Lats</option>
+                <option value="triceps">Triceps</option>
+                <option value="hamstrings">Hamstrings</option>
+                <option value="neck">Neck</option>
+                <option value="biceps">Biceps</option>
+                <option value="chest">Chest</option>
+                <option value="abdominals">Abdominals</option>
+                <option value="glutes">Glutes</option>
+                <option value="middle back">Middle Back</option>
+              </select>
+            </div>
+            <div class="filters">
+              <h3>Equipment</h3>
+              <select id="equipmentSelect">
+                <option value="all">All</option>
+                <option value="body only">Body Weight</option>
+                <option value="machine">Machine</option>
+                <option value="other">Other</option>
+                <option value="kettlebells">Kettlebell</option>
+                <option value="dumbbell">Dumbbell</option>
+                <option value="cable">Cables</option>
+                <option value="barbell">Barbell</option>
+                <option value="bands">Bands</option>
+              </select>
+            </div>
+            <div class="filters">
+              <h3>Difficulty</h3>
+              <select id="levelSelect">
+                <option value="all">All</option>
+                <option value="beginner">Beginner</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="expert">Expert</option>
+              </select>
+            </div>
+            <div class="filters">
+                <h3>Category</h3>
+                <select id="categorySelect">
+                    <option value="all">All</option>
+                    <option value="strength">Strength</option>
+                    <option value="cardio">Cardio</option>
+                    <option value="plyometrics">Plyometrics</option>
+                    <option value="stretching">Stretching</option>
+                    <option value="olympic weightlifting">Olympic Weightlifting</option>
+                    <option value="strongman">Strongman</option>
+                    <option value="powerlifting">Powerlifting</option>
+                </select>
+            </div>
+          </div>
+        <div class="container">
+            <h2>Select Exercises</h2>
+            <div id="exerciseList" class="exercise-grid">
+            </div>
+            <button id="saveWorkoutButton">Save Workout</button>
+        </div>
+        <div class="container">
+            <input type="text" id="searchInput" placeholder="Search workout...">
+          </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 Workout Web App. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBizhqmIMrQUlUvth8gKEDOFAleXxe-z-I",
+            authDomain: "workoutapp-d907b.firebaseapp.com",
+            projectId: "workoutapp-d907b",
+            storageBucket: "workoutapp-d907b.appspot.com",
+            messagingSenderId: "537280252444",
+            appId: "1:537280252444:web:6881e57f9e601b350eadd9"
+        };
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase();
+const exerciseList = document.getElementById('exerciseList');
+const exercisesRef = ref(db, 'exercises');
+
+let selectedExercises = [];
+
+function filterExercises(selectedMuscle, selectedEquipment, selectedLevel, selectedCategory, searchQuery) {
+    get(exercisesRef).then(snapshot => {
+        const exercises = [];
+        snapshot.forEach(childSnapshot => {
+            const exerciseData = childSnapshot.val();
+            if ((selectedMuscle === 'all' || exerciseData.primaryMuscles.includes(selectedMuscle)) &&
+                (selectedEquipment === 'all' || exerciseData.equipment === selectedEquipment) &&
+                (selectedLevel === 'all' || exerciseData.level === selectedLevel) &&
+                (selectedCategory === 'all' || exerciseData.category === selectedCategory) &&
+                (exerciseData.name.toLowerCase('').includes(searchQuery))) {
+                exercises.push(exerciseData);
+            }
+        });
+        exerciseList.innerHTML = ''; 
+        exercises.forEach(exerciseData => {
+            renderExercise(exerciseData); 
+        });
+    }).catch(error => {
+        console.error("Error filtering exercises:", error);
+    });
 }
 
-body {
-    font-family: Arial, sans-serif;
-    background-color: #f4f4f4;
-    margin: 0;
-    padding: 0;
+function retrieveExercises() {
+    get(exercisesRef).then((snapshot) => {
+        if (snapshot.exists()) {
+            snapshot.forEach((childSnapshot) => {
+                const exercise = childSnapshot.val();
+                renderExercise(exercise);
+            });
+        } else {
+            console.log("No exercises found");
+        }
+    }).catch((error) => {
+        console.error("Error retrieving exercises:", error);
+    });
 }
 
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
+function renderExercise(exerciseData) {
+    const exerciseButton = document.createElement('button');
+    exerciseButton.type = 'button'; 
+    exerciseButton.value = exerciseData.id;
+    exerciseButton.id = 'exercise_' + exerciseData.id;
+    exerciseButton.classList.add('exercise-button');
+
+    if (selectedExercises.includes(exerciseData.id)) {
+        exerciseButton.classList.add('selected');
+    }
+
+    exerciseButton.textContent = exerciseData.name;
+
+    exerciseButton.addEventListener('click', () => {
+        toggleExerciseSelection(exerciseData.id, exerciseButton);
+    });
+
+    exerciseList.appendChild(exerciseButton);
 }
 
-header {
-    background-color: #009579;
-    color: #fff;
-    padding: 20px;
-    text-align: center;
+function toggleExerciseSelection(exerciseId, exerciseButton) {
+    const index = selectedExercises.indexOf(exerciseId);
+    if (index === -1) {
+        selectedExercises.push(exerciseId);
+        exerciseButton.classList.add('selected');
+    } else {
+        selectedExercises.splice(index, 1);
+        exerciseButton.classList.remove('selected');
+    }
 }
 
-header h1 {
-    margin: 0;
-    font-size: 2rem;
-}
-header button{
-    margin-top: -35px;
-    float: right
-}
+document.addEventListener('DOMContentLoaded', () => {
+    const defaultMuscle = 'all';
+    const defaultEquipment = 'all';
+    const defaultLevel = 'all';
+    const defaultCategory = 'all';
+    const defaultSearch = '';
+    filterExercises(defaultMuscle, defaultEquipment, defaultLevel, defaultCategory, defaultSearch);
+});
 
-main {
-    padding: 40px;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-}
+const muscleSelect = document.getElementById('muscleSelect');
+const equipmentSelect = document.getElementById('equipmentSelect');
+const levelSelect = document.getElementById('levelSelect');
+const categorySelect = document.getElementById('categorySelect');
+const searchInput = document.getElementById('searchInput');
 
-.filters {
-    flex: 1 1 30%;
-    margin-bottom: 20px;
-    padding: 20px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    margin-top: 20px;
-}
+muscleSelect.addEventListener('change', () => {
+    const searchQuery = searchInput.value.toLowerCase();
+    const selectedMuscle = muscleSelect.value;
+    const selectedEquipment = equipmentSelect.value;
+    const selectedLevel = levelSelect.value;
+    const selectedCategory = categorySelect.value;
+    filterExercises(selectedMuscle, selectedEquipment, selectedLevel, selectedCategory, searchQuery);
+});
 
-#exerciseList {
-    flex: 1 1 70%;
-    padding: 20px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
+equipmentSelect.addEventListener('change', () => {
+    const searchQuery = searchInput.value.toLowerCase();
+    const selectedMuscle = muscleSelect.value;
+    const selectedEquipment = equipmentSelect.value;
+    const selectedLevel = levelSelect.value;
+    const selectedCategory = categorySelect.value;
+    filterExercises(selectedMuscle, selectedEquipment, selectedLevel, selectedCategory, searchQuery);
+});
+
+levelSelect.addEventListener('change', () => {
+    const searchQuery = searchInput.value.toLowerCase();
+    const selectedMuscle = muscleSelect.value;
+    const selectedEquipment = equipmentSelect.value;
+    const selectedLevel = levelSelect.value;
+    const selectedCategory = categorySelect.value;
+    filterExercises(selectedMuscle, selectedEquipment, selectedLevel, selectedCategory, searchQuery);
+});
+
+categorySelect.addEventListener('change', () => {
+    const searchQuery = searchInput.value.toLowerCase();
+    const selectedMuscle = muscleSelect.value;
+    const selectedEquipment = equipmentSelect.value;
+    const selectedLevel = levelSelect.value;
+    const selectedCategory = categorySelect.value;
+    filterExercises(selectedMuscle, selectedEquipment, selectedLevel, selectedCategory, searchQuery);
+});
+searchInput.addEventListener('input', () => {
+    const searchQuery = searchInput.value.toLowerCase();
+    const selectedMuscle = muscleSelect.value;
+    const selectedEquipment = equipmentSelect.value;
+    const selectedLevel = levelSelect.value;
+    const selectedCategory = categorySelect.value;
+    filterExercises(selectedMuscle, selectedEquipment, selectedLevel, selectedCategory, searchQuery);
+});
+
+function saveWorkout(user) {
+    const workoutName = document.getElementById('workoutNameInput').value.trim();
+    if (!workoutName) {
+        alert("Please enter a workout name.");
+        return;
+    }
     
-}
-.exercise-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
+    const selectedExercises = [];
+    const checkboxes = document.querySelectorAll('.exercise-button.selected');
+    checkboxes.forEach(checkbox => {
+        selectedExercises.push(checkbox.value);
+    });
+
+    if (selectedExercises.length === 0) {
+        alert("Please select at least one exercise for the workout.");
+        return;
+    }
+
+    if (user) {
+        const userId = user.uid;
+        const workoutRef = ref(db, `workouts/${userId}/${workoutName}`);
+        set(workoutRef, selectedExercises)
+            .then(() => {
+                alert(`Workout "${workoutName}" saved successfully!`);
+                window.location.href = 'Workouts.html';
+            })
+            .catch(error => {
+                console.error("Error saving workout:", error);
+            });
+    } else {
+        console.log("No user signed in.");
+    }
 }
 
-button {
-    display: block;
-    padding: 10px;
-    margin-top: 20px;
-    background-color: #009579;
-    color: #fff;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
+document.getElementById('saveWorkoutButton').addEventListener('click', () => {
+    const auth = getAuth();
+    onAuthStateChanged(auth, (user) => {
+        saveWorkout(user);
+    });
+});
+
+function retrieveWorkouts(user) {
+    if (user) {
+        const userId = user.uid;
+        const workoutsRef = ref(db, `workouts/${userId}`);
+        get(workoutsRef).then(snapshot => {
+            snapshot.forEach(workoutSnapshot => {
+                const workout = workoutSnapshot.val();
+            });
+        }).catch(error => {
+            console.error("Error retrieving workouts:", error);
+        });
+    } else {
+        console.log("No user signed in.");
+    }
 }
 
-button:hover {
-    text-decoration: underline;
-}
 
-input[type="text"] {
-    width: 100%;
-    padding: 10px;
-    margin-top: 20px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-}
+document.addEventListener('DOMContentLoaded', function() {
+    const workoutNameInput = document.getElementById('workoutNameInput');
+    const exerciseCheckboxes = document.querySelectorAll('.exercise-checkbox');
 
-footer {
-    background-color: #222;
-    color: #fff;
-    padding: 20px;
-    text-align: center;
-}
+    function getQueryParams() {
+        const queryParams = new URLSearchParams(window.location.search);
+        const params = {};
+        for (const [key, value] of queryParams.entries()) {
+            if (key === 'workoutName') {
+                params.workoutName = value;
+            } else if (key === 'selectedExercises[]') {
+                if (!params.selectedExercises) {
+                    params.selectedExercises = [];
+                }
+                params.selectedExercises.push(value);
+            }
+        }
+        return params;
+    }
 
-.exercise-button {
-    color: #000;
-    display: block;
-    width: 100%;
-    background-color: #ccc;
-    border-radius: 5px;
-    text-align: center;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
+    function autoPopulateFields() {
+        const queryParams = getQueryParams();
+        if (queryParams.workoutName) {
+            workoutNameInput.value = queryParams.workoutName;
+        }
+        if (queryParams.selectedExercises && queryParams.selectedExercises.length > 0) {
+            queryParams.selectedExercises.forEach(exerciseId => {
+                const checkbox = document.getElementById(`exercise_${exerciseId}`);
+                if (checkbox) {
+                    checkbox.checked = true;
+                }
+            });
+        }
+    }
 
-.selected {
-    background-color: #009579; 
-    border-color: #009688; 
-    color: #fff;
-}
-#saveWorkoutButton {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    padding: 10px 20px;
-    background-color: #009579;
-    color: #fff;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    z-index: 1000;
-}
+    autoPopulateFields();
+});
 
-#saveWorkoutButton:hover {
-    background-color: #00755f;
-}
-.header {
-    background-color: #009579;
-    color: #fff;
-    padding: 20px;
-    text-align: center;
-}
+document.addEventListener('DOMContentLoaded', function() {
+    const goToHomePageButton = document.getElementById('goToHomePageButton');
+    goToHomePageButton.addEventListener('click', function() {
+        window.location.href = 'Home.html';
+    });
+});
 
-.header h1 {
-    margin: 0;
-    font-size: 2rem;
-}
 
-.header button {
-    background-color: transparent;
-    color: #fff;
-    border: 2px solid #fff;
-    padding: 10px 20px;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.3s, color 0.3s;
-}
-
-.header button:hover {
-    background-color: #fff;
-    color: #009579;
-}
-
-.exercise-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 10px;
-}
-
-.exercise-card img {
-    width: 100px;
-    height: 100px;
-    margin-bottom: 10px;
-}
-
-.exercise-card .exercise-button {
-    background-color: #009579;
-    color: #fff;
-    border: none;
-    padding: 10px;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.3s, color 0.3s;
-}
-
-.exercise-card .exercise-button:hover {
-    background-color: #00755f;
-}
+window.onload = () => {
+    const auth = getAuth();
+    onAuthStateChanged(auth, (user) => {
+        retrieveWorkouts(user);
+    });
+};
+    </script>
+</body>
+</html>

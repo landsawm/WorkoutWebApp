@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Workouts</title>
+    <link rel="stylesheet" href="./src/Workout.css">
+</head>
+<body class="body">
+    <header class="header">
+        <div class="container">
+            <h1>Your Workouts!</h1>
+        </div>    
+    </header>
+    
+    <button id="goToHomePageButton" class="home-button">Home</button>
+    
+    <main class="main">
+        <div class="container">
+            <ul id="workoutList" class="workout-list">
+            </ul>
+        </div>
+        <div class="container" id="noWorkoutsMessage" style="display: none;">
+            <button id="createWorkoutButton" class="form__button">Create Workout</button>
+        </div>
+    </main>
+        
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 Workout Web App. All rights reserved.</p>
+        </div>
+    </footer>
+
+</body>
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getDatabase, ref, get, remove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+
+
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+apiKey: "AIzaSyBizhqmIMrQUlUvth8gKEDOFAleXxe-z-I",
+authDomain: "workoutapp-d907b.firebaseapp.com",
+projectId: "workoutapp-d907b",
+storageBucket: "workoutapp-d907b.appspot.com",
+messagingSenderId: "537280252444",
+appId: "1:537280252444:web:6881e57f9e601b350eadd9"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase();
+const workoutList = document.getElementById('workoutList');
+
+function renderWorkout(workoutName, exercises, workoutId) {
+    const workoutItem = document.createElement('li');
+    workoutItem.classList.add('workout-item');
+
+    const nameElement = document.createElement('h3');
+    nameElement.textContent = workoutName || "My Workout";
+    workoutItem.appendChild(nameElement);
+
+    const exercisesList = document.createElement('ul');
+    Object.keys(exercises).forEach(exercise => {
+        const exerciseItem = document.createElement('li');
+        exerciseItem.textContent = exercises[exercise];
+        exercisesList.appendChild(exerciseItem);
+    });
+    workoutItem.appendChild(exercisesList);
+
+    const editButton = document.createElement('button');
+    editButton.textContent = 'Edit';
+    editButton.addEventListener('click', () => {
+        const workoutNameElement = workoutItem.querySelector('h3');
+        const workoutName = workoutNameElement.textContent.trim();
+
+        const selectedExercises = [];
+        const exerciseCheckboxes = workoutItem.querySelectorAll('.exercise-checkbox:checked');
+        exerciseCheckboxes.forEach(checkbox => {
+            selectedExercises.push(checkbox.value);
+        });
+
+        const queryParams = new URLSearchParams();
+        queryParams.append('workoutName', workoutName);
+        selectedExercises.forEach(exerciseId => {
+            queryParams.append('selectedExercises[]', exerciseId);
+        });
+
+        window.location.href = `createWorkout.html?${queryParams}`;
+    });
+    workoutItem.appendChild(editButton);
+
+    const deleteButton = document.createElement('button');
+    deleteButton.textContent = 'Delete';
+    deleteButton.addEventListener('click', () => {
+        if (confirm("Are you sure you want to delete this workout?")) {
+            const userId = auth.currentUser.uid;
+            const workoutRef = ref(db, `workouts/${userId}/${workoutName}`);
+            remove(workoutRef).then(() => {
+                console.log('Workout deleted successfully');
+                workoutItem.remove();
+            }).catch((error) => {
+                console.error('Error deleting workout:', error);
+            });
+        }
+    });
+    workoutItem.appendChild(deleteButton);
+    workoutList.appendChild(workoutItem);
+}
+
+function retrieveWorkouts(user) {
+    if (user) {
+        const userId = user.uid;
+        const workoutsRef = ref(db, `workouts/${userId}`);
+        
+        get(workoutsRef).then((snapshot) => {
+            if (snapshot.exists()) {
+                workoutList.innerHTML = '';
+                snapshot.forEach(childSnapshot => {
+                    const workoutName = childSnapshot.key;
+                    const exercises = childSnapshot.val();
+                    renderWorkout(workoutName, exercises);
+                });
+                document.getElementById('noWorkoutsMessage').style.display = 'none';
+            } else {
+                workoutList.innerHTML = '';
+                document.getElementById('noWorkoutsMessage').style.display = 'block';
+            }
+        }).catch((error) => {
+            console.error("Error retrieving workouts:", error);
+        });
+    } else {
+        console.log("User is not signed in.");
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const createWorkoutButton = document.getElementById('createWorkoutButton');
+
+    createWorkoutButton.addEventListener('click', function() {
+        window.location.href = 'createWorkout.html';
+    });
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const goToHomePageButton = document.getElementById('goToHomePageButton');
+    goToHomePageButton.addEventListener('click', function() {
+        window.location.href = 'Home.html';
+    });
+});
+
+const auth = getAuth();
+
+onAuthStateChanged(auth, (user) => {
+    retrieveWorkouts(user);
+});
+    </script>
+</body>
+</html>

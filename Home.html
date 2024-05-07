@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mason's Workout Web App</title>
+    <link rel="stylesheet" href="Home.css">
+</head>
+<body>
+    <header>
+            <h1>Mason's Workout Web App</h1>       
+            <nav>
+                <ul>
+                    <li id="loginLink"><a href="login.html" id="logoutLink">Login</a></li>
+                    <li id="profileLink" style="display: none;"><a href="userinfo.html">Profile Settings</a></li>
+                </ul>
+            </nav>
+    </header>
+
+    <main>
+        <div class="category">
+                <section class="profile">
+                    <div id="userInfo"></div>
+                </section>
+            <section class="categories">
+                <div class="category">
+                    <a href="Workouts.html">
+                    <img src="C:\Users\Mason\WorkoutApp\Pictures\Cardio.webp" alt="Cardio">
+                    <h3>Your Workouts</h3>
+                    <p>Shows you previous workouts completed, and allows you to make new workouts</p>
+                    </a>
+                </div>
+                <div class="category">
+                    <a href="strength.html">
+                    <img src="C:\Users\Mason\WorkoutApp\Pictures\Strength.webp" alt="Strength Training">
+                    <h3>Exercises</h3>
+                    <p>This is a list of exercises that show how to do them, what eqipment you will need, fitness level needed to do them, and more!</p>
+                </a>
+                </div>
+                <div class="category">
+                    <a href="createWorkout.html">
+                    <img src="C:\Users\Mason\WorkoutApp\Pictures\Workout.webp" alt="Yoga">
+                    <h3>Create your own workouts</h3>
+                    <p>Select exercises and make your own workout routine!</p>
+                </a>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 Workout Web App. All rights reserved.</p>
+        </div>
+    </footer>
+  </body>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getDatabase, ref, child, get } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+
+const firebaseConfig = {
+apiKey: "AIzaSyBizhqmIMrQUlUvth8gKEDOFAleXxe-z-I",
+authDomain: "workoutapp-d907b.firebaseapp.com",
+projectId: "workoutapp-d907b",
+storageBucket: "workoutapp-d907b.appspot.com",
+messagingSenderId: "537280252444",
+appId: "1:537280252444:web:6881e57f9e601b350eadd9"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth();
+const db = getDatabase();
+
+function displayUserInfo(userData) {
+    const userInfoDiv = document.getElementById('userInfo');
+    userInfoDiv.innerHTML = ''; 
+
+    const userDiv = document.createElement('div');
+    userDiv.innerHTML = `
+        <h2>Welcome, ${userData.username}!</h2>
+        <hr>
+    `;
+    userInfoDiv.appendChild(userDiv);
+}
+
+onAuthStateChanged(auth, (user) => {
+    const profileLink = document.getElementById("profileLink");
+    const loginLink = document.getElementById("loginLink");
+    if (user) {
+        profileLink.style.display = "block";
+        logoutLink.textContent = "Logout";
+        
+        const userId = user.uid;
+        const userRef = ref(db, 'users/' + userId);
+        get(userRef).then((snapshot) => {
+            if (snapshot.exists()) {
+                const userData = snapshot.val();
+                displayUserInfo(userData);
+            } else {
+                console.log("User data not found.");
+            }
+        }).catch((error) => {
+            console.error("Error getting user data:", error);
+        });
+    } else {
+        loginLink.innerHTML = `<a href="login.html">Login</a>`;
+    }
+});
+
+document.getElementById("logoutLink").addEventListener("click", logout);
+
+function logout() {
+    auth.signOut().then(() => {
+        console.log("User logged out successfully.");
+        alert("Logged out successfully!");
+    }).catch((error) => {
+        console.error("Error logging out:", error);
+        alert("Error logging out. Please try again.");
+    });
+}
+    </script>
+  </html>
